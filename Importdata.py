@@ -1,5 +1,6 @@
 import requests
 import re
+import os
 
 def f(regexStr,target):
 	# refer to https://stackoverflow.com/questions/4026685/regex-to-get-text-between-two-characters
@@ -268,9 +269,12 @@ def savealldata(filename):
 	# set up list for all the data
 	pdata = []
 
-	print('Importing full data for each player')
+	print('Importing full data for each player...')
 	# loop through each player downloading the data
 	for i in range(nplayers-1):
+
+		if i%50 == 0:
+			print('Processing player {} of {}...'.format(i+1,nplayers))
 
 		# data is imported here
 		pd = importplayerdata(i+1)
@@ -325,6 +329,7 @@ def savealldata(filename):
 	# now on to writing in the actual data
 	# loop through each player
 	for i in range(len(pdata)):
+
 		# set up the input to be written for this player
 		input = []
 		# sort out the basic data and add to input
@@ -348,8 +353,26 @@ def savealldata(filename):
 # https://fantasy.premierleague.com/drf/elements/
 # https://fantasy.premierleague.com/drf/element-summary/{player_id}
 
-# example use...
-# set your filename 
-filename = '/Users/Henry/GitHub/FPL/alldata.csv'
-# run script to save all the data
-savealldata(filename)
+if __name__ == '__main__':
+	print(43%5)
+	print(43//5)
+	path = os.getcwd()
+	
+	while True:
+
+		filename = input('Enter the filename to save to:')
+
+		fullfilepath = path+'/'+filename+'.csv'
+
+		print('File will be saved to: {}'.format(fullfilepath))
+
+		selection = input('Enter y if this is ok:')
+
+		if selection.lower().strip() == 'y':
+			print('Running script')
+			break
+
+	savealldata(fullfilepath)
+
+
+
