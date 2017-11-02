@@ -350,6 +350,6 @@ def savealldata(filename):
 
 # example use...
 # set your filename 
-filename = '/Users/Henry/projects/FantasyFootball/Data/fulldata.csv'
+filename = '/Users/Henry/GitHub/FPL/alldata.csv'
 # run script to save all the data
 savealldata(filename)
