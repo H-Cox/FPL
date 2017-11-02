@@ -354,8 +354,7 @@ def savealldata(filename):
 # https://fantasy.premierleague.com/drf/element-summary/{player_id}
 
 if __name__ == '__main__':
-	print(43%5)
-	print(43//5)
+
 	path = os.getcwd()
 	
 	while True:
