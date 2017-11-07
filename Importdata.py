@@ -175,7 +175,7 @@ def save_names(player_data,filename):
 	data_file.close()
 
 # saves the selected datatypes into the file
-def savedata(player_data,data_names,data_index,filename):
+def save_data(player_data,data_names,data_index,filename):
 
 	# open the file
 	data_file = open(filename,'w')
