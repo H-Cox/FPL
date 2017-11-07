@@ -10,60 +10,25 @@ def f(regexStr,target):
     else:
         return mo
 
-def importbasicdata():
+def import_basic_data():
 	# pull the web page in
-	r = requests.get('https://fantasy.premierleague.com/drf/elements/')
+	r = requests.get('https://fantasy.premierleague.com/drf/elements/').json()
 
-	# extract text and strip ends
-	info = r.text
-	info = info[2:-2]
+	# export keys and all the values for each player
+	headings = list(r[0].keys())
+	data_values = [list(r[i].values()) for i in range(len(r))]
 
-	# split each players data out
-	players = info.split('},{')
+	return [headings, data_values]
 
-	return players
-
-def getdatatypes(players):
-
-	# extract all the data types
-	pdatanames = list(f(r"(?<=,)[^:]*(?=:)",',' + players[0]))
-	pdatanames = [item.strip('"') for item in pdatanames]
-
-	return pdatanames
-
-def getfhistdatatypes():
+def get_full_data_types():
 
 	# download the player data
-	r = requests.get('https://fantasy.premierleague.com/drf/element-summary/1')
+	r = requests.get('https://fantasy.premierleague.com/drf/element-summary/1').json()
 
-	# extract text
-	info = r.text
+	# extract history keys
+	return list(r['history'][0].keys())
 
-	# split off the history and arrange data
-	data = info.split(',"history":')
-	data1 = data[0]
-	hdata = data[1][2:-3]
-	history = hdata.split('},{')
-
-	# extract all the data types
-	pdatanames = list(f(r"(?<=,)[^:]*(?=:)",',' + history[0]))
-	pdatanames = [item.strip('"') for item in pdatanames]
-
-	return pdatanames
-
-def getdata(players):
-
-	# we will fill in the player data
-	pdataraw = []
-
-	# loop through players extracting the data
-	for i, player in enumerate(players):
-		# use regex to find data between ':' and ','
-		pdataraw.append(f(r"(?<=:)[^,]*(?=,)",player))
-		pdataraw[i].append(player[-1])
-	return pdataraw
-
-def cleanhistorydata(playerhistory):
+def clean_history_data(player_history):
 
 	# select data types to use
 	index = [7,8,10,11,12,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
@@ -71,10 +36,10 @@ def cleanhistorydata(playerhistory):
 			48,49,50,53,5,4,3]
 
 	# get lists of each previous gameweeks
-	history = playerhistory.split('},{')
+	history = player_history.split('},{')
 
 	# initialise history and loop throuh extracting data
-	gwhist = []
+	gw_hist = []
 	for w, week in enumerate(history):
 	
 		# extract main data values
@@ -91,21 +56,21 @@ def cleanhistorydata(playerhistory):
 			temp[5] = '0'
 			index[-2] = 4
 			index[-1] = 3
-			gwhist.append([temp[i].strip('"') for i in index])
+			gw_hist.append([temp[i].strip('"') for i in index])
 		else:
 			temp[5] = '1'
 			index[-2] = 3
 			index[-1] = 4
-			gwhist.append([temp[i].strip('"') for i in index])
+			gw_hist.append([temp[i].strip('"') for i in index])
 
-	return gwhist
+	return gw_hist
 
-def cleanfixturedata(playerfixtures):
+def clean_fixture_data(player_fixtures):
 	# split off each upcoming fixture
-	fixtures = playerfixtures.split('},{')
+	fixtures = player_fixtures.split('},{')
 
 	# initialise and loop through fixtures
-	gwfix = []
+	gw_fixtures = []
 	for g, gws in enumerate(fixtures):
 		# extract main data values
 		temp = (f(r"(?<=:)[^,]*(?=,)",gws))
@@ -118,17 +83,17 @@ def cleanfixturedata(playerfixtures):
 		if temp[5] == 'false':
 			#if false it was away
 			temp[5] = '0'
-			gwfix.append([temp[i].strip('"') for i in [5,6,17]])
+			gw_fixtures.append([temp[i].strip('"') for i in [5,6,17]])
 		else:
 			temp[5] = '1'
-			gwfix.append([temp[i].strip('"') for i in [5,6,16]])
+			gw_fixtures.append([temp[i].strip('"') for i in [5,6,16]])
 
 	# return final list of lists, data types are is it home (1)
 	# or false(0), fixture difficult and opponent team id
-	return gwfix
+	return gw_fixtures
 
 # import full data for a single player
-def importplayerdata(id):
+def import_player_data(id):
 
 	# download the player data
 	r = requests.get('https://fantasy.premierleague.com/drf/element-summary/' + str(id))
@@ -141,111 +106,111 @@ def importplayerdata(id):
 	data1 = data[0]
 	hdata = data[1][2:-3]
 
-	gwhist = cleanhistorydata(hdata)
+	gw_hist = clean_history_data(hdata)
 
 	# now split off the upcoming fixtures
 	data2 = data1.split(',"fixtures":')
 	fdata = data2[1][2:-2]
 
-	gwfix = cleanfixturedata(fdata)
+	gw_fixtures = clean_fixture_data(fdata)
 
 	# return the results
-	return [gwhist, gwfix]
+	return [gw_hist, gw_fixtures]
 
-def importfulldata():
+def import_full_data():
 
-	pdatabasic = getdata(importbasicdata())
+	[headings ,basic_data] = import_basic_data()
 
-	nplayers = len(pdatabasic)
+	number_players = len(basic_data)
 
-	pdata = []
+	player_data = []
 	examples = []
 
-	for i in range(nplayers-1):
+	for i in range(number_players-1):
 
-		pd = importplayerdata(i+1)
-		pe = pd2examples(pd)
+		temp_data = import_player_data(i+1)
+		temp_examples = player_data_to_examples(temp_data)
 
-		pdata.append(pd)
-		examples = examples + pe
+		player_data.append(temp_data)
+		examples = examples + temp_examples
 
 		if i%10 == 0:
 			print(i)
 
-	return [pdata,examples]
+	return [player_data,examples]
 
-# convert player datafile into a set of examples to learn from
-def pd2examples(pd):
+# convert player data_file into a set of examples to learn from
+def player_data_to_examples(player_data):
 
-	history = pd[0]
+	history = player_data[0]
 
-	numweeks = len(history)
+	num_weeks = len(history)
 	examples = []
-	for x in range(numweeks-3):
+	for x in range(num_weeks-3):
 		examples.append([history[x+3][0]]+history[x+2]+history[x+1]+history[x])
 	return examples
 
-# save the list of data types in pdatanames to a file
-def savedatatypes(pdatanames,filename):
+# save the list of data types in data_names to a file
+def save_data_types(data_names,filename):
 
-	datafile = open(filename,'w')
+	data_file = open(filename,'w')
 
-	for id, name in enumerate(pdatanames):
-		datafile.write(','.join([str(id),name])+'\n')
+	for id, name in enumerate(data_names):
+		data_file.write(','.join([str(id),name])+'\n')
 
-	datafile.close()
+	data_file.close()
 
 # saves the ID number and names of players to file
-def savenames(pdata,filename):
+def save_names(player_data,filename):
 
 	# open the data file
-	datafile = open(filename,'w')
+	data_file = open(filename,'w')
 
 	# loop through players writing their names in
-	for p in pdata:
+	for p in player_data:
 		input = [p[i].strip('"') for i in [0,6,7]]
-		datafile.write(','.join(input)+'\n')
+		data_file.write(','.join(input)+'\n')
 
 	# close data file
-	datafile.close()
+	data_file.close()
 
 # saves the selected datatypes into the file
-def savedata(pdata,pdatanames,dataindex,filename):
+def savedata(player_data,data_names,data_index,filename):
 
 	# open the file
-	datafile = open(filename,'w')
+	data_file = open(filename,'w')
 
 	# write the header for each column
-	input = [pdatanames[i].strip('"') for i in dataindex]
-	datafile.write(','.join(input)+'\n')
+	input = [data_names[i].strip('"') for i in data_index]
+	data_file.write(','.join(input)+'\n')
 
 	# loop through the players writing in the data
-	for p in pdata:
-		input = [p[i].strip('"') for i in dataindex]
-		datafile.write(','.join(input)+'\n')
+	for p in player_data:
+		input = [p[i].strip('"') for i in data_index]
+		data_file.write(','.join(input)+'\n')
 
 	# close the file
-	datafile.close()
+	data_file.close()
 
-def saveexamples(examples,filename):
+def save_examples(examples,filename):
 
 	file = open(filename,'w')
 	for l in examples:
 		file.write(','.join(l) + '\n')
 
-def saveplayer(playerdata,filename):
+def save_player(player_data,filename):
 
 	file = open(filename,'w')
 
-	for l in playerdata[0]:
+	for l in player_data[0]:
 		file.write(','.join(l) + '\n')
 	file.write('\n')
-	for l in playerdata[1]:
+	for l in player_data[1]:
 		file.write(','.join(l) + '\n')
 
 	file.close()
 
-def savealldata(filename):
+def save_all_data(filename):
 	# This script automatically downloads, sorts and saves all the data
 	# from the FPL site in a csv format where each player is on a new line
 	# and the headings of each data type are on the first line.
@@ -259,36 +224,34 @@ def savealldata(filename):
 	print('Importing basic player data...')
 	
 	# import basic data and seperate data names and data values
-	basicdata = importbasicdata()
-	headings = getdatatypes(basicdata)
-	basicdatavalues = getdata(basicdata)
+	[headings, basic_data_values] = import_basic_data()
 
 	# find the number of players
-	nplayers = len(basicdata)
+	number_players = len(basic_data_values)
 
 	# set up list for all the data
-	pdata = []
+	player_data = []
 
 	print('Importing full data for each player...')
 	# loop through each player downloading the data
-	for i in range(nplayers-1):
+	for i in range(number_players-1):
 
 		if i%50 == 0:
-			print('Processing player {} of {}...'.format(i+1,nplayers))
+			print('Processing player {} of {}...'.format(i+1,number_players))
 
 		# data is imported here
-		pd = importplayerdata(i+1)
+		temp_data = import_player_data(i+1)
 
-		# pdata has [basic, history, future]
-		pdata.append([basicdatavalues[i]] + pd)
+		# player_data has [basic, history, future]
+		player_data.append([basic_data_values[i]] + temp_data)
 
 
 	# figure out the number of weeks completed and the number remaining
-	numhist = len(pdata[0][1])
-	numfuture = len(pdata[0][2])
+	number_history = len(player_data[0][1])
+	number_future = len(player_data[0][2])
 
 	# get the data names for the full history data
-	fhisttypes = getfhistdatatypes();
+	full_data_types = get_full_data_types();
 
 	# index to select the history data we want
 	index = [7,8,10,11,12,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
@@ -296,28 +259,28 @@ def savealldata(filename):
 			48,49,50,53,5]
 
 	# set the data names according to our index above
-	fhistnames = [fhisttypes[j] for j in index]+['team_goals','opponent_goals']
+	full_data_names = [full_data_types[j] for j in index]+['team_goals','opponent_goals']
 
 	# loop through each week in history adding in the titles
-	for i in range(numhist):
+	for i in range(number_history):
 		input = []
 		# loop through the week itself changing for each value
-		for j in range(len(pdata[0][1][0])):
+		for j in range(len(player_data[0][1][0])):
 
-			input.append('GW {}: '.format(i+1) + fhistnames[j])
+			input.append('GW {}: '.format(i+1) + full_data_names[j])
 
 		# save to the headings file
 		headings = headings + input
 
 	# set what the headings are for future fixtures
-	futureheadings = ['Home_or_away','Fixture_difficulty','Opponent_id']
+	future_headings = ['Home_or_away','Fixture_difficulty','Opponent_id']
 
 	# loop through each future week adding in titles in a similar way as before
-	for i in range(numfuture):
+	for i in range(number_future):
 		input = []
-		for j in range(len(pdata[0][2][0])):
+		for j in range(len(player_data[0][2][0])):
 			# the correct gameweek number is i + 1 + numhist
-			input.append('GW {}: '.format(i+1+numhist) + futureheadings[j])
+			input.append('GW {}: '.format(i+1+number_history) + future_headings[j])
 
 		headings = headings + input
 
@@ -328,17 +291,17 @@ def savealldata(filename):
 
 	# now on to writing in the actual data
 	# loop through each player
-	for i in range(len(pdata)):
+	for i in range(len(player_data)):
 
 		# set up the input to be written for this player
 		input = []
 		# sort out the basic data and add to input
-		input = input + [pdata[i][0][j].strip('"') for j in range(len(pdata[i][0]))]
+		input = input + [str(player_data[i][0][j]).strip('"') for j in range(len(player_data[i][0]))]
 
 		# now sort out the full history and future fixtures data
 		for j in range(1,3):
 
-			input = input + [item for sublist in pdata[i][j] for item in sublist]
+			input = input + [item for sublist in player_data[i][j] for item in sublist]
 		
 		# finally write this players data to the file	
 		file.write(','.join(input) + '\n')
@@ -361,9 +324,9 @@ if __name__ == '__main__':
 
 		filename = input('Enter the filename to save to:')
 
-		fullfilepath = path+'/'+filename+'.csv'
+		full_filepath = path+'/'+filename+'.csv'
 
-		print('File will be saved to: {}'.format(fullfilepath))
+		print('File will be saved to: {}'.format(full_filepath))
 
 		selection = input('Enter y if this is ok:')
 
@@ -371,7 +334,7 @@ if __name__ == '__main__':
 			print('Running script')
 			break
 
-	savealldata(fullfilepath)
+	save_all_data(full_filepath)
 
 
 
