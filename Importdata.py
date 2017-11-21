@@ -35,19 +35,11 @@ def clean_history_data(player_history):
 			30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
 			48,49,50,53,5,4,3]
 
-	# get lists of each previous gameweeks
-	history = player_history.split('},{')
-
 	# initialise history and loop throuh extracting data
 	gw_hist = []
-	for w, week in enumerate(history):
+	for w, week in enumerate(player_history):
 	
-		# extract main data values
-		temp = (f(r"(?<=:)[^,]*(?=,)",week))
-
-		# and final value
-		final = week.split(',"opponent_team":')
-		temp.append(final[1])
+		temp = list(week.values())
 
 		# sort out team and opponent goals and if it was a home game
 		# set if home or away and extract opponent
@@ -56,66 +48,74 @@ def clean_history_data(player_history):
 			temp[5] = '0'
 			index[-2] = 4
 			index[-1] = 3
-			gw_hist.append([temp[i].strip('"') for i in index])
+			gw_hist.append([temp[i] for i in index])
 		else:
 			temp[5] = '1'
 			index[-2] = 3
 			index[-1] = 4
-			gw_hist.append([temp[i].strip('"') for i in index])
+			gw_hist.append([temp[i] for i in index])
 
 	return gw_hist
 
 def clean_fixture_data(player_fixtures):
-	# split off each upcoming fixture
-	fixtures = player_fixtures.split('},{')
 
 	# initialise and loop through fixtures
 	gw_fixtures = []
-	for g, gws in enumerate(fixtures):
+	for g, fixture in enumerate(player_fixtures):
 		# extract main data values
-		temp = (f(r"(?<=:)[^,]*(?=,)",gws))
-
-		# and final value
-		final = gws.split(',"team_h":')
-		temp.append(final[1])
+		temp = list(fixture.values())
 
 		# set if home or away and extract opponent
 		if temp[5] == 'false':
 			#if false it was away
 			temp[5] = '0'
-			gw_fixtures.append([temp[i].strip('"') for i in [5,6,17]])
+			gw_fixtures.append([temp[i] for i in [5,6,17]])
 		else:
 			temp[5] = '1'
-			gw_fixtures.append([temp[i].strip('"') for i in [5,6,16]])
+			gw_fixtures.append([temp[i] for i in [5,6,16]])
 
 	# return final list of lists, data types are is it home (1)
 	# or false(0), fixture difficult and opponent team id
 	return gw_fixtures
 
+def history_pad(gw_history, num_weeks_missing):
+
+	items = len(gw_history[0])
+
+	non_playing_week = 45*[0]
+
+	missing_weeks = num_weeks_missing*[non_playing_week]
+
+	return missing_weeks+gw_history
+
 # import full data for a single player
-def import_player_data(id):
+def import_player_data(player_id):
 
 	# download the player data
-	r = requests.get('https://fantasy.premierleague.com/drf/element-summary/' + str(id))
+	r = requests.get('https://fantasy.premierleague.com/drf/element-summary/' + str(player_id)).json()
 
-	# extract text
-	info = r.text
+	history_data = r['history']
 
-	# split off the history and arrange data
-	data = info.split(',"history":')
-	data1 = data[0]
-	hdata = data[1][2:-3]
-
-	gw_hist = clean_history_data(hdata)
+	gw_history = clean_history_data(history_data)
 
 	# now split off the upcoming fixtures
-	data2 = data1.split(',"fixtures":')
-	fdata = data2[1][2:-2]
+	fixture_data = r['fixtures']
 
-	gw_fixtures = clean_fixture_data(fdata)
+	gw_fixtures = clean_fixture_data(fixture_data)
+
+	first_gw_played = 1
+
+	# pad out the history data if the player was not in the system originally
+	if len(gw_history)+len(gw_fixtures) != 38:
+
+		num_weeks_missing = 38 - len(gw_history)-len(gw_fixtures)
+
+		gw_history = history_pad(gw_history, num_weeks_missing)
+
+		first_gw_played += num_weeks_missing
 
 	# return the results
-	return [gw_hist, gw_fixtures]
+	return [first_gw_played, gw_history, gw_fixtures]
 
 def import_full_data():
 
@@ -243,7 +243,7 @@ def save_all_data(filename):
 		temp_data = import_player_data(i+1)
 
 		# player_data has [basic, history, future]
-		player_data.append([basic_data_values[i]] + temp_data)
+		player_data.append([basic_data_values[i]+[temp_data[0]]] + temp_data[1:])
 
 
 	# figure out the number of weeks completed and the number remaining
@@ -270,7 +270,7 @@ def save_all_data(filename):
 			input.append('GW {}: '.format(i+1) + full_data_names[j])
 
 		# save to the headings file
-		headings = headings + input
+		headings = headings + ['First_gameweek'] + input
 
 	# set what the headings are for future fixtures
 	future_headings = ['Home_or_away','Fixture_difficulty','Opponent_id']
@@ -301,7 +301,7 @@ def save_all_data(filename):
 		# now sort out the full history and future fixtures data
 		for j in range(1,3):
 
-			input = input + [item for sublist in player_data[i][j] for item in sublist]
+			input = input + [str(item) for sublist in player_data[i][j] for item in sublist]
 		
 		# finally write this players data to the file	
 		file.write(','.join(input) + '\n')
@@ -331,7 +331,6 @@ if __name__ == '__main__':
 		selection = input('Enter y if this is ok:')
 
 		if selection.lower().strip() == 'y':
-			print('Running script')
 			break
 
 	save_all_data(full_filepath)
