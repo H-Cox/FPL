@@ -129,7 +129,7 @@ def import_full_data():
 	for i in range(number_players-1):
 
 		temp_data = import_player_data(i+1)
-		temp_examples = player_data_to_examples(temp_data)
+		temp_examples = player_data_to_examples(temp_data[1:])
 
 		player_data.append(temp_data)
 		examples = examples + temp_examples
@@ -145,8 +145,15 @@ def player_data_to_examples(player_data):
 	history = player_data[0]
 
 	num_weeks = len(history)
+	short_history = []
+	for x in range(num_weeks):
+		short_history.append([history[x][i] for i in [0,1,5,]])
+
 	examples = []
 	for x in range(num_weeks-3):
+
+		if history[x][5]+history[x+1][5]+history[x+2][5] < 150:
+			continue
 		examples.append([history[x+3][0]]+history[x+2]+history[x+1]+history[x])
 	return examples
 
@@ -225,6 +232,7 @@ def save_all_data(filename):
 	
 	# import basic data and seperate data names and data values
 	[headings, basic_data_values] = import_basic_data()
+	headings = headings + ['first_gw_played']
 
 	# find the number of players
 	number_players = len(basic_data_values)
@@ -242,7 +250,7 @@ def save_all_data(filename):
 		# data is imported here
 		temp_data = import_player_data(i+1)
 
-		# player_data has [basic, history, future]
+		# player_data has [player id][basic data, history, future]
 		player_data.append([basic_data_values[i]+[temp_data[0]]] + temp_data[1:])
 
 
@@ -270,7 +278,7 @@ def save_all_data(filename):
 			input.append('GW {}: '.format(i+1) + full_data_names[j])
 
 		# save to the headings file
-		headings = headings + ['First_gameweek'] + input
+		headings = headings + input
 
 	# set what the headings are for future fixtures
 	future_headings = ['Home_or_away','Fixture_difficulty','Opponent_id']
