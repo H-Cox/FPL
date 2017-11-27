@@ -117,27 +117,28 @@ def import_player_data(player_id):
 	# return the results
 	return [first_gw_played, gw_history, gw_fixtures]
 
-def import_full_data():
+def generate_examples():
 
 	[headings ,basic_data] = import_basic_data()
 
 	number_players = len(basic_data)
 
-	player_data = []
+	prediction_set = []
 	examples = []
-
-	for i in range(number_players-1):
+	player_data = []
+	for i in range(100):#number_players-1):
 
 		temp_data = import_player_data(i+1)
-		temp_examples = player_data_to_examples(temp_data[1:])
+		[temp_predictions, temp_examples] = player_data_to_examples(temp_data[1:])
 
 		player_data.append(temp_data)
 		examples = examples + temp_examples
+		prediction_set.append(temp_predictions)
 
-		if i%10 == 0:
+		if i%50 == 0:
 			print(i)
 
-	return [player_data,examples]
+	return [player_data,examples,prediction_set]
 
 # convert player data_file into a set of examples to learn from
 def player_data_to_examples(player_data):
@@ -147,15 +148,20 @@ def player_data_to_examples(player_data):
 	num_weeks = len(history)
 	short_history = []
 	for x in range(num_weeks):
-		short_history.append([history[x][i] for i in [0,1,5,]])
+		# export: score, value, mins played, goals, assists, clean sheets, opponent goals, team goals
+		short_history.append([history[x][i] for i in [0,1,5,6,7,-2,-1]])
 
 	examples = []
 	for x in range(num_weeks-3):
-
+		# only save it if played more than 150mins in last 3 weeks
 		if history[x][5]+history[x+1][5]+history[x+2][5] < 150:
 			continue
-		examples.append([history[x+3][0]]+history[x+2]+history[x+1]+history[x])
-	return examples
+		examples.append([short_history[x+3][0]]+short_history[x+2]
+			+short_history[x+1]+short_history[x])
+
+	prediction_set = [short_history[-3]+short_history[-2]
+						+short_history[-1]]
+	return [prediction_set,examples]
 
 # save the list of data types in data_names to a file
 def save_data_types(data_names,filename):
