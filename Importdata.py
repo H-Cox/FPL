@@ -1,14 +1,5 @@
 import requests
-import re
 import os
-
-def f(regexStr,target):
-	# refer to https://stackoverflow.com/questions/4026685/regex-to-get-text-between-two-characters
-    mo = re.findall(regexStr,target)
-    if not mo:
-        print("NO MATCH")
-    else:
-        return mo
 
 def import_basic_data():
 	# pull the web page in
@@ -126,7 +117,7 @@ def generate_examples():
 	prediction_set = []
 	examples = []
 	player_data = []
-	for i in range(100):#number_players-1):
+	for i in range(number_players-1):
 
 		temp_data = import_player_data(i+1)
 		[temp_predictions, temp_examples] = player_data_to_examples(temp_data[1:])
