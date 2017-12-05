@@ -1,6 +1,26 @@
 import requests
 import os
 
+def number_to_list(number, number_max):
+	a_list = [0]*number_max
+	a_list[number-1] = 1
+	return a_list
+
+def import_team_names():
+
+	r = requests.get('https://fantasy.premierleague.com/drf/teams').json()
+
+	team_id_to_code = {}
+	team_name_to_code = {}
+	team_code_to_name = {}
+
+	for team_number in range(len(r)):
+		team_id_to_code[team_number+1] = r[team_number]['code']
+		team_name_to_code[r[team_number]['name']]=r[team_number]['code']
+		team_code_to_name[r[team_number]['code']]=r[team_number]['name']
+
+	return [team_id_to_code, team_name_to_code, team_code_to_name]
+
 def import_basic_data():
 	# pull the web page in
 	r = requests.get('https://fantasy.premierleague.com/drf/elements/').json()
@@ -8,6 +28,13 @@ def import_basic_data():
 	# export keys and all the values for each player
 	headings = list(r[0].keys())
 	data_values = [list(r[i].values()) for i in range(len(r))]
+
+	[team_id_to_code, team_name_to_code, team_code_to_name] = import_team_names()
+
+	headings.insert(4,'team name')
+
+	for player_id, player in enumerate(data_values):
+		data_values[player_id].insert(4,team_code_to_name[player[3]])
 
 	return [headings, data_values]
 
@@ -108,19 +135,49 @@ def import_player_data(player_id):
 	# return the results
 	return [first_gw_played, gw_history, gw_fixtures]
 
-def generate_examples():
 
-	[headings ,basic_data] = import_basic_data()
+def check_settings(settings):
 
-	number_players = len(basic_data)
+	defaults = {
+				"History index" : [0,1],
+				"History weeks" : 3
+				}
+
+	for key in defaults:
+		if key not in settings:
+			settings[key] = defaults[key]
+
+	return settings
+
+def generate_examples(*args):
+	# check inputs
+	if len(args) == 2:
+		settings = check_settings(args[0])
+		imported_data = True
+	elif len(args) == 1:
+		settings = check_settings(args[0])
+	else:
+		settings = check_settings({})
+	# determine number of players to loop over
+	if imported_data:
+		player_data = args[1]
+		number_players = len(player_data)
+	else:
+		player_data = []
+		[headings,basic_data] = import_basic_data()
+		number_players = len(basic_data)
 
 	prediction_set = []
 	examples = []
-	player_data = []
-	for i in range(number_players-1):
 
-		temp_data = import_player_data(i+1)
-		[temp_predictions, temp_examples] = player_data_to_examples(temp_data[1:])
+	for i in range(5):#number_players-1):
+
+		if imported_data:
+			temp_data = player_data[i]
+		else:
+			temp_data = import_player_data(i+1)
+
+		[temp_predictions, temp_examples] = player_data_to_examples(temp_data,settings)
 
 		player_data.append(temp_data)
 		examples = examples + temp_examples
@@ -132,27 +189,30 @@ def generate_examples():
 	return [player_data,examples,prediction_set]
 
 # convert player data_file into a set of examples to learn from
-def player_data_to_examples(player_data):
+def player_data_to_examples(player_data,settings):
 
-	history = player_data[0]
+	history = player_data[1]
 
 	num_weeks = len(history)
+	hist_weeks = settings['History weeks']
+
 	short_history = []
 	for x in range(num_weeks):
 		# export: score, value, mins played, goals, assists, clean sheets, opponent goals, team goals
-		short_history.append([history[x][i] for i in [0,1,5,6,7,-2,-1]])
+		short_history.append([history[x][i] for i in settings['History index']])
 
 	examples = []
-	for x in range(num_weeks-3):
-		# only save it if played more than 150mins in last 3 weeks
-		if history[x][5]+history[x+1][5]+history[x+2][5] < 150:
+	for x in range(num_weeks-hist_weeks):
+		# only save if player has played more than 50mins per week
+		if sum([history[x+w][5] for w in range(hist_weeks)]) < 50*hist_weeks:
 			continue
-		examples.append([short_history[x+3][0]]+short_history[x+2]
-			+short_history[x+1]+short_history[x])
+		this_history = list(reversed(short_history[x:x+hist_weeks]))
+		example = [short_history[x+hist_weeks][0]] + [item for week in this_history for item in week]
+		examples.append(example)
 
-	prediction_set = [short_history[-3]+short_history[-2]
-						+short_history[-1]]
-	return [prediction_set,examples]
+	prediction_set = [item for week in short_history[-hist_weeks:] for item in week]
+
+	return [prediction_set, examples]
 
 # save the list of data types in data_names to a file
 def save_data_types(data_names,filename):
@@ -250,7 +310,6 @@ def save_all_data(filename):
 		# player_data has [player id][basic data, history, future]
 		player_data.append([basic_data_values[i]+[temp_data[0]]] + temp_data[1:])
 
-
 	# figure out the number of weeks completed and the number remaining
 	number_history = len(player_data[0][1])
 	number_future = len(player_data[0][2])
@@ -278,7 +337,7 @@ def save_all_data(filename):
 		headings = headings + input
 
 	# set what the headings are for future fixtures
-	future_headings = ['Home_or_away','Fixture_difficulty','Opponent_id']
+	future_headings = ['home_or_away','fixture_difficulty','opponent_id']
 
 	# loop through each future week adding in titles in a similar way as before
 	for i in range(number_future):
