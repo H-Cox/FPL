@@ -98,8 +98,6 @@ def clean_fixture_data(player_fixtures):
 
 def history_pad(gw_history, num_weeks_missing):
 
-	items = len(gw_history[0])
-
 	non_playing_week = 45*[0]
 
 	missing_weeks = num_weeks_missing*[non_playing_week]
@@ -108,6 +106,35 @@ def history_pad(gw_history, num_weeks_missing):
 
 # import full data for a single player
 def import_player_data(player_id):
+
+	# download the player data
+	r = requests.get('https://fantasy.premierleague.com/drf/element-summary/' + str(player_id)).json()
+
+	history_data = r['history']
+
+	gw_history = clean_history_data(history_data)
+
+	# now split off the upcoming fixtures
+	fixture_data = r['fixtures']
+
+	gw_fixtures = clean_fixture_data(fixture_data)
+
+	first_gw_played = 1
+
+	# pad out the history data if the player was not in the system originally
+	if len(gw_history)+len(gw_fixtures) != 38:
+
+		num_weeks_missing = 38 - len(gw_history)-len(gw_fixtures)
+
+		gw_history = history_pad(gw_history, num_weeks_missing)
+
+		first_gw_played += num_weeks_missing
+
+	# return the results
+	return [first_gw_played, gw_history, gw_fixtures]
+
+# import full data for a single player
+def import_player_data2(player_id, team_name_data):
 
 	# download the player data
 	r = requests.get('https://fantasy.premierleague.com/drf/element-summary/' + str(player_id)).json()
@@ -290,6 +317,7 @@ def save_all_data(filename):
 	# import basic data and seperate data names and data values
 	[headings, basic_data_values] = import_basic_data()
 	headings = headings + ['first_gw_played']
+	team_name_data = import_team_names()
 
 	# find the number of players
 	number_players = len(basic_data_values)
@@ -305,7 +333,7 @@ def save_all_data(filename):
 			print('Processing player {} of {}...'.format(i+1,number_players))
 
 		# data is imported here
-		temp_data = import_player_data(i+1)
+		temp_data = import_player_data2(i+1,team_name_data)
 
 		# player_data has [player id][basic data, history, future]
 		player_data.append([basic_data_values[i]+[temp_data[0]]] + temp_data[1:])
