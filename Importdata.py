@@ -178,6 +178,7 @@ def check_settings(settings):
 
 def generate_examples(*args):
 	# check inputs
+	imported_data = False
 	if len(args) == 2:
 		settings = check_settings(args[0])
 		imported_data = True
@@ -197,7 +198,7 @@ def generate_examples(*args):
 	prediction_set = []
 	examples = []
 
-	for i in range(5):#number_players-1):
+	for i in range(number_players-1):
 
 		if imported_data:
 			temp_data = player_data[i]
@@ -243,6 +244,15 @@ def player_data_to_examples(player_data,settings):
 
 # save the list of data types in data_names to a file
 def save_data_types(data_names,filename):
+
+	# if you want to only save the data types used in the machine
+	# learning examples, uncomment the lines below
+	index = [7,8,10,11,12,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
+			30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
+			48,49,50,53,5]
+	data_names = np.array(data_names)
+	data_names = list(data_names[index])
+	# end of uncommenting section
 
 	data_file = open(filename,'w')
 
