@@ -9,4 +9,6 @@ If you want to use the data, I will keep alldata.csv updated each week and this 
 
 This is all written in Python3.  I recommend making a new virtual environment to run all this in and then installing the dependencies within it. Using "pip install -r requirements.txt". 
 
+I have recently added some ways to predict player scores using a simple linear regression model. Have a look at linear_regression.py for more info...
+
 Any comments or suggestions welcomed!
