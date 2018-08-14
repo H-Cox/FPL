@@ -12,3 +12,6 @@
 !data_types.csv
 !playerData/
 !playerData/*
+!importWPandas.py
+!data/
+!data/*
