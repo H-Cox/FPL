@@ -1,4 +1,5 @@
 import requests
+import numpy
 import pandas as pd
 import datetime
 import time
@@ -12,24 +13,18 @@ def importTodaysData():
     return basicData
 
 def mergeNewData(newData):
-	# Mac
-    #dataName = '/Users/Henry/GitHub/FPL/data/basicDataStore.pkl'
-    # RaspberryPi
-    dataName = '~/GitHub/FPL/data/basicDataStore.pkl'
-    dataStore = pd.read_pickle(dataName)
+
+    dataName = 'data/basicDataStore.csv'
+    dataStore = pd.read_csv(dataName)
     frames = [dataStore, newData]
     newDataStore = pd.concat(frames)
-    newDataStore.to_pickle(dataName)
+    newDataStore.to_csv(dataName)
 
 def saveNewData(newData):
-    # Mac
-    #filepath = '/Users/Henry/GitHub/FPL/data/dailyStore/'
-
-    # Raspberry Pi
-    filepath = '~/GitHub/FPL/data/dailyStore/'
-    name = '{}.pkl'.format(datetime.date.today())
+    filepath = 'data/dailyStore/'
+    name = '{}.csv'.format(datetime.date.today())
     
-    newData.to_pickle(filepath+name)
+    newData.to_csv(filepath+name)
 
 def dailyTask():
 	print('running tasks')

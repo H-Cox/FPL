@@ -14,4 +14,6 @@
 !playerData/*
 !importWPandas.py
 !data/
-!data/*
+!data/basicDataStore.csv
+!data/dailyStore/
+!data/dailyStore/*
