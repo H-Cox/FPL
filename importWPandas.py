@@ -43,12 +43,13 @@ def main():
 		if t.hour >= 7 and t.minute >= 0:
 			future += datetime.timedelta(days=1)
 		wait = (future-t).seconds
+
 		print('Waiting {} seconds.'.format(wait))
 		time.sleep(wait)
 
     	#do 9AM stuff
 		dailyTask()
 		print('Tasks done for today, recalculating in 1 hour.')
-		time.sleep('3600')
+		time.sleep(3600)
 if __name__ == '__main__':
 	main()
