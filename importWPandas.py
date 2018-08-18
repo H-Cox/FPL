@@ -31,7 +31,7 @@ def dailyTask():
 	todaysData = importTodaysData()
 
 	saveNewData(todaysData)
-	mergeNewData(todaysData)
+	#mergeNewData(todaysData)
 
 
 def main():
