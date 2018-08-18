@@ -343,7 +343,8 @@ def save_all_data(filename):
 			print('Processing player {} of {}...'.format(i+1,number_players))
 
 		# data is imported here
-		temp_data = import_player_data2(i+1,team_name_data)
+		row_player_id = basic_data_values[i][0]
+		temp_data = import_player_data2(row_player_id,team_name_data)
 
 		# player_data has [player id][basic data, history, future]
 		player_data.append([basic_data_values[i]+[temp_data[0]]] + temp_data[1:])
