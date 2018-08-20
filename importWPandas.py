@@ -28,13 +28,13 @@ def mergeNewData(newData):
     dataStore = pd.read_csv(dataName)
     frames = [dataStore, newData]
     newDataStore = pd.concat(frames)
-    newDataStore.to_csv(dataName)
+    newDataStore.to_csv(dataName,index=False)
 
 def saveNewData(newData):
     filepath = 'data/dailyStore/'
     name = '{}.csv'.format(datetime.date.today())
     
-    newData.to_csv(filepath+name)
+    newData.to_csv(filepath+name,index=False)
 
 def dailyTask():
 	print('running tasks')
