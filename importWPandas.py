@@ -4,13 +4,23 @@ import pandas as pd
 import datetime
 import time
 
+def clipUnnamedColumns(dataframe):
+
+	dFColumns = dataframe.columns
+
+	for name in dFColumns:
+		if 'unnamed' in name.lower():
+			dataframe = dataframe.drop(columns = name, axis = 1)
+
+	return dataframe
+
 def importTodaysData():
     
     basicPage = requests.get('https://fantasy.premierleague.com/drf/elements/').json()
     basicData = pd.DataFrame(basicPage)
     basicData['date']=datetime.date.today()
 
-    return basicData
+    return clipUnnamedColumns(basicData)
 
 def mergeNewData(newData):
 
@@ -31,7 +41,7 @@ def dailyTask():
 	todaysData = importTodaysData()
 
 	saveNewData(todaysData)
-	#mergeNewData(todaysData)
+	mergeNewData(todaysData)
 
 
 def main():
